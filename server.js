@@ -27,39 +27,29 @@ app.get("/records", (req, res) => {
   res.json(sorted);
 });
 
-// --- Records (create) ---
+// --- Records (create: accept any JSON object) ---
 app.post("/records", (req, res) => {
-  const { name, note } = req.body || {};
-  if (!name || typeof name !== "string") {
-    return res.status(400).json({ error: "name is required" });
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "body must be a JSON object" });
   }
   const rec = {
     id: String(Date.now()),
-    name,
-    note: note || "",
     createdAt: Date.now(),
+    ...req.body,        // let users send any fields they want
   };
   records.push(rec);
   res.status(201).json(rec);
 });
 
-// --- Records (update) ---
+// --- Records (update: shallow merge any fields) ---
 app.put("/records/:id", (req, res) => {
   const { id } = req.params;
   const idx = records.findIndex(r => r.id === id);
   if (idx === -1) return res.status(404).json({ error: "record not found" });
-
-  // allow updating any field except id/createdAt by default
-  const { name, note, ...rest } = req.body || {};
-  if (name !== undefined && typeof name !== "string") {
-    return res.status(400).json({ error: "name must be string" });
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    return res.status(400).json({ error: "body must be a JSON object" });
   }
-  records[idx] = {
-    ...records[idx],
-    ...(name !== undefined ? { name } : {}),
-    ...(note !== undefined ? { note } : {}),
-    ...rest,
-  };
+  records[idx] = { ...records[idx], ...req.body, id, createdAt: records[idx].createdAt };
   res.json(records[idx]);
 });
 
@@ -91,4 +81,5 @@ app.use((req, res) => res.status(404).json({ error: "Not found", path: req.path 
 app.listen(PORT, () => {
   console.log(`Mock API running on http://localhost:${PORT}`);
 });
+
 
