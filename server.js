@@ -43,6 +43,36 @@ app.post("/records", (req, res) => {
   res.status(201).json(rec);
 });
 
+// --- Records (update) ---
+app.put("/records/:id", (req, res) => {
+  const { id } = req.params;
+  const idx = records.findIndex(r => r.id === id);
+  if (idx === -1) return res.status(404).json({ error: "record not found" });
+
+  // allow updating any field except id/createdAt by default
+  const { name, note, ...rest } = req.body || {};
+  if (name !== undefined && typeof name !== "string") {
+    return res.status(400).json({ error: "name must be string" });
+  }
+  records[idx] = {
+    ...records[idx],
+    ...(name !== undefined ? { name } : {}),
+    ...(note !== undefined ? { note } : {}),
+    ...rest,
+  };
+  res.json(records[idx]);
+});
+
+// --- Records (delete) ---
+app.delete("/records/:id", (req, res) => {
+  const { id } = req.params;
+  const before = records.length;
+  records = records.filter(r => r.id !== id);
+  if (records.length === before) return res.status(404).json({ error: "record not found" });
+  res.json({ ok: true, id });
+});
+
+
 // --- Upload (multipart/form-data, field "file") ---
 const upload = multer({ storage: multer.memoryStorage() });
 app.post("/upload", upload.single("file"), (req, res) => {
@@ -61,3 +91,4 @@ app.use((req, res) => res.status(404).json({ error: "Not found", path: req.path 
 app.listen(PORT, () => {
   console.log(`Mock API running on http://localhost:${PORT}`);
 });
+
